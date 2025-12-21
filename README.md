@@ -15,14 +15,6 @@ Scraper web y API REST para obtener el tipo de cambio del USD desde el [Banco Ce
 - 🌐 CORS habilitado
 - ⚡ Respuestas rápidas y confiables
 
-## 📋 Archivos del Proyecto
-
-- **`bcv_scraper.py`**: Scraper principal que extrae el valor del USD desde bcv.org.ve
-- **`api_server.py`**: Servidor API REST con FastAPI
-- **`ejemplo_uso.py`**: Ejemplos completos de uso del scraper
-- **`ejemplo_uso_simple.py`**: Forma más simple de obtener el valor
-- **`requirements.txt`**: Dependencias del proyecto
-
 ## 🚀 Instalación
 
 ```bash
@@ -31,19 +23,15 @@ pip install -r requirements.txt
 
 ## 💡 Uso del Scraper
 
-### Forma más simple (solo el valor)
+### Uso básico
 ```python
 from bcv_scraper import BCVScraper
 
 # Obtener solo el valor numérico
 valor = BCVScraper().get_usd_value()
 print(f"USD: {valor} Bs")
-```
 
-### Forma completa (con detalles)
-```python
-from bcv_scraper import BCVScraper
-
+# O con información completa
 scraper = BCVScraper()
 resultado = scraper.obtener_valor_usd()
 
@@ -118,18 +106,7 @@ GET http://localhost:8000/health
 http://localhost:8000/docs
 ```
 
-## 📝 Ejemplos de uso
-
-### Ejecutar ejemplos
-```bash
-# Ejemplo simple
-python ejemplo_uso_simple.py
-
-# Ejemplos completos
-python ejemplo_uso.py
-```
-
-### Usar la API desde Python
+## 📝 Uso desde Otros Lenguajes
 ```python
 import requests
 
