@@ -28,7 +28,7 @@ class BCVScraper:
         
         Returns:
             dict: Diccionario con el valor del USD, fecha y moneda
-                  Ejemplo: {'moneda': 'USD', 'valor': 583.2838000, 'fecha': '2025-12-22'}
+                  Ejemplo: {'moneda': 'USD', 'valor': 288.4494, 'fecha': '2025-12-23'}
         """
         try:
             # Realizar la petición HTTP (desactivar verificación SSL si hay problemas)
@@ -38,51 +38,54 @@ class BCVScraper:
             # Parsear el HTML
             soup = BeautifulSoup(response.content, 'html.parser')
             
-            # Buscar el valor del USD - Método 1: Por estructura de tabla
             usd_value = None
             fecha = None
             
-            # Intentar encontrar el div o sección que contiene los tipos de cambio
-            # Buscar por texto que contenga "USD" o "$"
-            elementos_usd = soup.find_all(string=re.compile(r'USD|Dólar', re.IGNORECASE))
+            # Método 1: Usar el selector específico del BCV oficial (RECOMENDADO)
+            # El valor oficial del USD está en div#dolar strong
+            dolar_div = soup.find('div', id='dolar')
+            if dolar_div:
+                strong_tag = dolar_div.find('strong')
+                if strong_tag:
+                    usd_value = strong_tag.get_text(strip=True)
             
-            for elemento in elementos_usd:
-                # Buscar el valor numérico cerca del texto USD
-                parent = elemento.parent
-                if parent:
-                    # Buscar hermanos o elementos cercanos que contengan números
-                    siblings = parent.find_next_siblings()
-                    for sibling in siblings:
-                        texto = sibling.get_text(strip=True)
-                        # Buscar patrón de número con comas
-                        match = re.search(r'(\d{1,3}(?:,\d{3})*(?:\.\d+)?)', texto)
-                        if match:
-                            usd_value = match.group(1)
-                            break
-                
-                if usd_value:
-                    break
-            
-            # Método 2: Buscar directamente por patrones numéricos grandes
+            # Método 2: Buscar en la sección oficial del BCV (fallback)
             if not usd_value:
-                # Buscar todos los elementos que contengan números grandes (típicos de tasas de cambio)
-                all_text = soup.get_text()
-                # Patrón para números grandes con formato venezolano (ej: 583,2838000)
-                matches = re.findall(r'\b(\d{2,3}[,\.]\d{2,8})\b', all_text)
-                if matches:
-                    # Tomar el valor más grande (generalmente el USD es el más alto)
-                    valores = []
-                    for match in matches:
-                        try:
-                            valor_limpio = match.replace(',', '.')
-                            valores.append((float(valor_limpio), match))
-                        except ValueError:
-                            continue
+                # Buscar en la clase específica del tipo de cambio oficial
+                oficial_section = soup.find('div', class_='view-tipo-de-cambio-oficial-del-bcv')
+                if oficial_section:
+                    # Buscar el elemento que contiene "USD"
+                    usd_elements = oficial_section.find_all(string=re.compile(r'USD', re.IGNORECASE))
+                    for elemento in usd_elements:
+                        parent = elemento.parent
+                        if parent:
+                            # Buscar el valor en el contenedor padre
+                            container = parent.find_parent('div', class_='recuadrotsmc')
+                            if container:
+                                strong_tag = container.find('strong')
+                                if strong_tag:
+                                    usd_value = strong_tag.get_text(strip=True)
+                                    break
+            
+            # Método 3: Buscar por patrón específico evitando la tabla de bancos (último recurso)
+            if not usd_value:
+                # Buscar elementos que contengan "USD" pero NO estén en la tabla de bancos
+                elementos_usd = soup.find_all(string=re.compile(r'USD', re.IGNORECASE))
+                for elemento in elementos_usd:
+                    # Verificar que NO esté dentro de una tabla (para evitar Banesco, BBVA, etc.)
+                    if elemento.find_parent('table'):
+                        continue
                     
-                    if valores:
-                        # Ordenar por valor y tomar el más grande
-                        valores.sort(reverse=True)
-                        usd_value = valores[0][1]
+                    parent = elemento.parent
+                    if parent:
+                        # Buscar el strong más cercano
+                        strong = parent.find_next('strong')
+                        if strong:
+                            texto = strong.get_text(strip=True)
+                            # Verificar que sea un número válido
+                            if re.match(r'\d{2,3}[,\.]\d+', texto):
+                                usd_value = texto
+                                break
             
             # Buscar la fecha
             fecha_elementos = soup.find_all(string=re.compile(r'Fecha|fecha', re.IGNORECASE))
